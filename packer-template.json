@@ -1,0 +1,61 @@
+{
+  "variables": {
+    "project_id": "",
+    "source_image": "debian-9-stretch-v20170918"
+  },
+  "builders": [{
+    "type": "googlecompute",
+    "project_id": "{{user `project_id`}}",
+    "zone": "us-west1-a",
+    "machine_type": "n1-standard-1",
+    "preemptible": false,
+    "source_image": "{{user `source_image`}}",
+    "disk_size": "15",
+    "disk_type": "pd-ssd",
+    "image_name": "debian-9-stretch-desktop-v{{isotime \"20060102-150405\"}}",
+    "image_family": "debian-9-desktop",
+    "image_description": "Debian 9 stretch with Gnome desktop, VNC server, google-chrome (source image: {{user `source_image`}})",
+    "ssh_username": "packer"
+  }],
+  "provisioners":[
+    {
+      "type": "file",
+      "source": "scripts",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "curl -s -S -f -o /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb",
+        "sudo apt-get update",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends etckeeper",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dbus",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y gnome",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tightvncserver fonts-noto-cjk xfonts-base",
+        "sudo dpkg -i /tmp/google-chrome-stable_current_amd64.deb || true",
+        "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --fix-broken"
+      ],
+      "expect_disconnect": false
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "python /tmp/scripts/mk-manifest.py"
+      ],
+      "expect_disconnect": false
+    },
+    {
+      "type": "file",
+      "source": "/tmp/packages.jsonl",
+      "destination": "manifest/packages.jsonl",
+      "direction": "download"
+    },
+    {
+      "type": "file",
+      "source": "/tmp/packages.txt",
+      "destination": "manifest/packages.txt",
+      "direction": "download"
+    }
+  ]
+}
+
